@@ -15,6 +15,13 @@ ENV NVIDIA_DRIVER_CAPABILITIES="compute,video,utility"
 # https://github.com/dlemstra/Magick.NET/issues/707#issuecomment-785351620
 ENV MALLOC_TRIM_THRESHOLD_=131072
 
+# WebDAV environment variables
+ENV WEBDAV_URL=""
+ENV WEBDAV_USERNAME=""
+ENV WEBDAV_PASSWORD=""
+ENV WEBDAV_MOUNT_PATH="/mnt/webdav"
+ENV WEBDAV_OPTIONS="rw,auto,user,file_mode=0644,dir_mode=0755"
+
 RUN \
   echo "**** install jellyfin *****" && \
   curl -s https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | gpg --dearmor | tee /usr/share/keyrings/jellyfin.gpg >/dev/null && \
@@ -27,7 +34,9 @@ RUN \
     at \
     jellyfin=${JELLYFIN_RELEASE} \
     mesa-va-drivers \
-    xmlstarlet && \
+    xmlstarlet \
+    davfs2 \
+    ca-certificates && \
   echo "**** cleanup ****" && \
   rm -rf \
     /tmp/* \
@@ -40,3 +49,7 @@ COPY root/ /
 # ports and volumes
 EXPOSE 8096 8920
 VOLUME /config
+# Set permissions for scripts
+RUN chmod +x /etc/cont-init.d/50-webdav && \
+    chmod +x /etc/services.d/webdav/run && \
+    chmod +x /etc/services.d/webdav/finish
