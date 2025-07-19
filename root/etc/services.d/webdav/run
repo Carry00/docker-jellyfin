@@ -1,30 +1,34 @@
 #!/usr/bin/with-contenv bash
 
 if [[ -n "$WEBDAV_URL" ]]; then
-    echo "**** Starting WebDAV mount service ****"
+    echo "**** Starting WebDAV mount service with rclone ****"
+    
+    # 创建挂载点
+    mkdir -p "$WEBDAV_MOUNT_PATH"
+    
+    # 创建 rclone 配置
+    mkdir -p /config/rclone
+    
+    cat > /config/rclone/rclone.conf << EOF
+[webdav]
+type = webdav
+url = $WEBDAV_URL
+vendor = other
+user = $WEBDAV_USERNAME
+pass = $(echo -n "$WEBDAV_PASSWORD" | rclone obscure -)
+EOF
     
     # 等待网络就绪
     sleep 5
     
     # 挂载 WebDAV
-    while true; do
-        if mount -t davfs "$WEBDAV_URL" "$WEBDAV_MOUNT_PATH" -o "$WEBDAV_OPTIONS"; then
-            echo "**** WebDAV mounted successfully at $WEBDAV_MOUNT_PATH ****"
-            break
-        else
-            echo "**** WebDAV mount failed, retrying in 30 seconds ****"
-            sleep 30
-        fi
-    done
-    
-    # 保持服务运行，监控挂载状态
-    while true; do
-        if ! mountpoint -q "$WEBDAV_MOUNT_PATH"; then
-            echo "**** WebDAV mount lost, attempting to remount ****"
-            mount -t davfs "$WEBDAV_URL" "$WEBDAV_MOUNT_PATH" -o "$WEBDAV_OPTIONS"
-        fi
-        sleep 60
-    done
+    echo "**** Mounting WebDAV with rclone ****"
+    exec rclone mount webdav: "$WEBDAV_MOUNT_PATH" \
+        --config /config/rclone/rclone.conf \
+        --allow-other \
+        --allow-non-empty \
+        --vfs-cache-mode writes \
+        --log-level INFO
 else
     echo "**** No WebDAV URL provided, WebDAV service disabled ****"
     sleep infinity

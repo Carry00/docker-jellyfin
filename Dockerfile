@@ -20,7 +20,6 @@ ENV WEBDAV_URL=""
 ENV WEBDAV_USERNAME=""
 ENV WEBDAV_PASSWORD=""
 ENV WEBDAV_MOUNT_PATH="/mnt/webdav"
-ENV WEBDAV_OPTIONS="rw,auto,user,file_mode=0644,dir_mode=0755"
 
 RUN \
   echo "**** install jellyfin *****" && \
@@ -35,8 +34,19 @@ RUN \
     jellyfin=${JELLYFIN_RELEASE} \
     mesa-va-drivers \
     xmlstarlet \
-    davfs2 \
-    ca-certificates && \
+    ca-certificates \
+    fuse3 \
+    curl \
+    unzip && \
+  echo "**** install rclone ****" && \
+  RCLONE_ARCH=$(dpkg --print-architecture) && \
+  if [ "$RCLONE_ARCH" = "amd64" ]; then RCLONE_ARCH="amd64"; fi && \
+  if [ "$RCLONE_ARCH" = "arm64" ]; then RCLONE_ARCH="arm64"; fi && \
+  curl -L "https://downloads.rclone.org/rclone-current-linux-${RCLONE_ARCH}.zip" -o rclone.zip && \
+  unzip rclone.zip && \
+  cp rclone-*/rclone /usr/local/bin/ && \
+  chmod +x /usr/local/bin/rclone && \
+  rm -rf rclone* && \
   echo "**** cleanup ****" && \
   rm -rf \
     /tmp/* \
@@ -46,10 +56,13 @@ RUN \
 # add local files
 COPY root/ /
 
+# Set permissions for scripts
+RUN if [ -f /etc/cont-init.d/50-webdav ]; then chmod +x /etc/cont-init.d/50-webdav; fi && \
+    if [ -d /etc/services.d/webdav ]; then \
+      chmod +x /etc/services.d/webdav/run; \
+      chmod +x /etc/services.d/webdav/finish; \
+    fi
+
 # ports and volumes
 EXPOSE 8096 8920
 VOLUME /config
-# Set permissions for scripts
-RUN chmod +x /etc/cont-init.d/50-webdav && \
-    chmod +x /etc/services.d/webdav/run && \
-    chmod +x /etc/services.d/webdav/finish
