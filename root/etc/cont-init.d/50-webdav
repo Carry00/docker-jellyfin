@@ -1,0 +1,33 @@
+#!/usr/bin/with-contenv bash
+
+# WebDAV 挂载脚本
+
+if [[ -n "$WEBDAV_URL" ]]; then
+    echo "**** Setting up WebDAV mount ****"
+    
+    # 创建挂载点
+    mkdir -p "$WEBDAV_MOUNT_PATH"
+    
+    # 创建 davfs2 配置目录
+    mkdir -p /etc/davfs2
+    
+    # 设置 davfs2 配置
+    if [[ -n "$WEBDAV_USERNAME" && -n "$WEBDAV_PASSWORD" ]]; then
+        echo "$WEBDAV_URL $WEBDAV_USERNAME $WEBDAV_PASSWORD" >> /etc/davfs2/secrets
+        chmod 600 /etc/davfs2/secrets
+    fi
+    
+    # 配置 davfs2 选项
+    cat > /etc/davfs2/davfs2.conf << EOF
+use_locks 0
+ignore_dav_header 1
+if_match_bug 1
+drop_weak_etags 1
+allow_cookie 1
+precheck 1
+EOF
+    
+    echo "**** WebDAV configuration completed ****"
+else
+    echo "**** No WebDAV URL provided, skipping WebDAV setup ****"
+fi

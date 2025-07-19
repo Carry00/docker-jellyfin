@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bash
+
+if [[ -n "$WEBDAV_URL" ]] && mountpoint -q "$WEBDAV_MOUNT_PATH"; then
+    echo "**** Unmounting WebDAV ****"
+    umount "$WEBDAV_MOUNT_PATH" || umount -l "$WEBDAV_MOUNT_PATH"
+fi

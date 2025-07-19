@@ -1,0 +1,31 @@
+#!/usr/bin/with-contenv bash
+
+if [[ -n "$WEBDAV_URL" ]]; then
+    echo "**** Starting WebDAV mount service ****"
+    
+    # 等待网络就绪
+    sleep 5
+    
+    # 挂载 WebDAV
+    while true; do
+        if mount -t davfs "$WEBDAV_URL" "$WEBDAV_MOUNT_PATH" -o "$WEBDAV_OPTIONS"; then
+            echo "**** WebDAV mounted successfully at $WEBDAV_MOUNT_PATH ****"
+            break
+        else
+            echo "**** WebDAV mount failed, retrying in 30 seconds ****"
+            sleep 30
+        fi
+    done
+    
+    # 保持服务运行，监控挂载状态
+    while true; do
+        if ! mountpoint -q "$WEBDAV_MOUNT_PATH"; then
+            echo "**** WebDAV mount lost, attempting to remount ****"
+            mount -t davfs "$WEBDAV_URL" "$WEBDAV_MOUNT_PATH" -o "$WEBDAV_OPTIONS"
+        fi
+        sleep 60
+    done
+else
+    echo "**** No WebDAV URL provided, WebDAV service disabled ****"
+    sleep infinity
+fi
